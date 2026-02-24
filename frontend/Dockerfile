@@ -1,11 +1,11 @@
 # Use an official Nginx image to serve static files.
 FROM nginx:1.27-alpine
 
-# Copy the custom Nginx configuration.
+# Copy custom Nginx config that proxies /api to backend service.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy frontend static assets.
+# Copy frontend static dashboard page.
 COPY index.html /usr/share/nginx/html/index.html
 
-# Document the container port Nginx listens on.
+# Document container listening port.
 EXPOSE 80

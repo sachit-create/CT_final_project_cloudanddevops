@@ -1,9 +1,9 @@
 # Beginner Microservices Full Stack Project (Docker Compose)
 
-This project demonstrates a simple **microservices-style full stack app** with three containers:
+This project demonstrates a simple **microservices-style full stack app** with three containers and a beginner dashboard:
 
-- `frontend`: Static HTML + JavaScript served by Nginx
-- `backend`: Python Flask REST API
+- `frontend`: Static HTML + JavaScript dashboard served by Nginx
+- `backend`: Python Flask REST API + monitoring endpoints
 - `database`: PostgreSQL
 
 The goal is clarity for DevOps beginners.
@@ -11,13 +11,13 @@ The goal is clarity for DevOps beginners.
 ## 1) Architecture
 
 ```text
-Browser --> Frontend (Nginx, port 3000 on host)
+Browser --> Frontend Dashboard (Nginx, port 3000 on host)
               |
               | /api requests proxied internally
               v
           Backend (Flask, port 5000 on host)
               |
-              | uses DB_* environment variables
+              | reads Docker socket + system info + DB env vars
               v
           Database (PostgreSQL, internal only)
 ```
@@ -40,6 +40,7 @@ Browser --> Frontend (Nginx, port 3000 on host)
   - `location /api/` forwards requests to `http://backend:5000`
 - Backend receives DB connection info from environment variables:
   - `DB_HOST=database`, `DB_PORT=5432`, etc.
+- Backend reads `/var/run/docker.sock` (read-only mount) to inspect container states.
 - Database is internal because no host port is mapped for it.
 
 ## 4) Project structure
@@ -81,6 +82,8 @@ docker compose up --build
 
 ```bash
 curl http://localhost:5000/api/health
+curl http://localhost:5000/api/containers
+curl http://localhost:5000/api/system
 ```
 
 4. Stop services:
@@ -95,12 +98,37 @@ docker compose down
 docker compose down -v
 ```
 
-## 6) API endpoint
+## 6) API endpoints
 
 - `GET /api/health`
 - Returns backend status and DB-related environment values (for learning/debugging).
+- `GET /api/containers`
+- Returns all Docker container statuses from the local Docker daemon.
+- `GET /api/system`
+- Returns CPU/memory/platform/runtime info plus Docker host summary.
+- `GET /api/dashboard`
+- Combined endpoint used by frontend auto-refresh dashboard.
 
-## 7) Deploying this on AWS EC2 (simple path)
+## 7) Dashboard features
+
+- Live container status table.
+- Machine/system summary (CPU, memory, OS, hostname).
+- Health badge and DB target info.
+- Auto-refresh every 10 seconds.
+
+## 8) Docker socket note (important)
+
+To show container statuses, backend mounts Docker socket:
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+- `:ro` makes it read-only at mount level.
+- This is okay for learning, but in production treat Docker socket access as sensitive.
+
+## 9) Deploying this on AWS EC2 (simple path)
 
 1. Launch an EC2 instance (Ubuntu is common).
 2. Open security group ports:
@@ -124,6 +152,7 @@ docker compose up -d --build
 - Use real secrets management (not plain text in compose).
 - Put Nginx/ALB + HTTPS in front.
 - Restrict backend port exposure if not needed publicly.
+- Revisit Docker socket access and use a safer monitoring pattern for production.
 
 ---
 

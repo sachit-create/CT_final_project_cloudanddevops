@@ -23,6 +23,9 @@ services:
       DB_NAME: appdb
       DB_USER: appuser
       DB_PASSWORD: apppassword
+    volumes:
+      # Read-only mount of Docker socket so backend can inspect container states.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       - database
 

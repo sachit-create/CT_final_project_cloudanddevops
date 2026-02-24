@@ -4,10 +4,10 @@ This file explains the whole project in simple terms, including architecture, fl
 
 ## Big Picture
 
-This is a 3-service microservices-style full stack project:
+This is a 3-service microservices-style full stack project with a live monitoring dashboard:
 
-1. `frontend` container: Nginx serves `index.html` on host port `3000`
-2. `backend` container: Flask API serves `/api/health` on host port `5000`
+1. `frontend` container: Nginx serves dashboard UI on host port `3000`
+2. `backend` container: Flask API serves monitoring endpoints on host port `5000`
 3. `database` container: PostgreSQL for data storage (internal only, no public port)
 
 ## Rough Diagram
@@ -31,6 +31,11 @@ Your Browser
 | container: demo-backend |
 | listens: 5000           |
 +-------------------------+
+    |
+    | reads /var/run/docker.sock (read-only)
+    | to inspect running containers
+    |
+    +-------> Docker daemon info (same host)
     |
     | uses env vars:
     | DB_HOST=database
@@ -67,6 +72,8 @@ CandDevOps_finalProj/
 - Maps ports:
   - `3000:80` for frontend
   - `5000:5000` for backend
+- Mounts Docker socket into backend:
+  - `/var/run/docker.sock:/var/run/docker.sock:ro`
 - No `ports` under database, so DB is private/internal.
 
 2. `frontend/Dockerfile`
@@ -77,18 +84,29 @@ CandDevOps_finalProj/
 - Proxies `/api/...` calls to `http://backend:5000` (service name-based communication).
 
 4. `frontend/index.html`
-- Simple UI button.
-- Calls `/api/health`, shows JSON response.
+- Live dashboard UI.
+- Calls `/api/dashboard` every 10 seconds and renders:
+  - backend health
+  - Docker container statuses
+  - machine/system info
 
 5. `backend/Dockerfile`
 - Builds Python runtime image, installs Flask, starts `app.py`.
 
 6. `backend/app.py`
-- Exposes `GET /api/health`.
-- Reads DB env vars so you learn config-by-environment.
+- Exposes:
+  - `GET /api/health`
+  - `GET /api/containers`
+  - `GET /api/system`
+  - `GET /api/dashboard`
+- Reads DB env vars.
+- Reads Docker daemon info through Docker SDK.
 
 7. `backend/requirements.txt`
-- Python dependencies (Flask).
+- Python dependencies:
+  - Flask
+  - Docker SDK
+  - psutil
 
 8. `README.md`
 - Explains architecture, flow, run steps, and EC2 path.
@@ -97,12 +115,12 @@ CandDevOps_finalProj/
 
 1. You open `http://localhost:3000`.
 2. Request goes to frontend container (Nginx).
-3. UI loads, you click `Check Backend Health`.
-4. Browser calls `/api/health` on same frontend host.
+3. UI loads and auto-requests `/api/dashboard` every 10 seconds.
+4. Browser calls `/api/dashboard` on same frontend host.
 5. Nginx sees `/api/` path and forwards to backend container.
-6. Flask handles endpoint and returns JSON.
-7. UI prints returned JSON.
-8. Backend can talk to DB using `DB_HOST=database` (container name on internal network).
+6. Flask collects health, container statuses, and system info, then returns one JSON payload.
+7. UI renders cards/table from returned data.
+8. Backend talks to DB using `DB_HOST=database` and inspects Docker state via socket mount.
 
 ## Important Concepts to Remember
 
@@ -111,3 +129,4 @@ CandDevOps_finalProj/
 3. Database is containerized in this setup.
 4. Database is not publicly exposed because no host port mapping is defined.
 5. Frontend and backend are exposed for browser/testing (`3000`, `5000`).
+6. Docker socket access is powerful; keep it for learning/demo, harden for production.

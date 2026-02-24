@@ -3,58 +3,281 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Microservices Demo</title>
+  <title>DevOps Status Dashboard</title>
   <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #dce3ee;
+      --text: #13233a;
+      --muted: #51627a;
+      --good: #1e8e3e;
+      --bad: #c62828;
+      --accent: #0b57d0;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      font-family: Arial, sans-serif;
-      margin: 2rem;
-      background: #f8fafc;
-      color: #0f172a;
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, #dbe8ff 0%, transparent 35%),
+        radial-gradient(circle at 90% 90%, #d7f5e6 0%, transparent 30%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 1.25rem;
     }
-    .card {
-      max-width: 640px;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
+
+    .container {
+      max-width: 1024px;
+      margin: 0 auto;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 1rem 1.25rem;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      box-shadow: 0 6px 18px rgba(19, 35, 58, 0.08);
     }
-    button {
-      margin-top: 0.75rem;
-      padding: 0.5rem 0.75rem;
-      cursor: pointer;
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
     }
-    pre {
-      background: #0f172a;
-      color: #e2e8f0;
+
+    .sub {
+      color: var(--muted);
+      margin: 0.4rem 0 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 1rem;
-      border-radius: 6px;
-      overflow-x: auto;
+      box-shadow: 0 5px 16px rgba(19, 35, 58, 0.06);
     }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 1.05rem;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .ok { background: #e5f5ea; color: var(--good); }
+    .down { background: #fde9e9; color: var(--bad); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid #eef2f8;
+      padding: 0.45rem 0.2rem;
+      vertical-align: top;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      padding: 0.5rem 0.85rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    code { font-size: 0.85rem; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Microservices Full Stack Demo</h1>
-    <p>This frontend calls the Flask backend health API through Nginx.</p>
-    <button id="check-btn">Check Backend Health</button>
-    <pre id="output">Click the button to call /api/health</pre>
-  </div>
+  <main class="container">
+    <section class="header">
+      <h1>Microservices Monitoring Dashboard</h1>
+      <p class="sub">Shows Docker container status and machine info from backend APIs.</p>
+      <div class="actions">
+        <button id="refresh-btn">Refresh Now</button>
+        <span class="muted">Auto-refresh: every 10 seconds</span>
+        <span class="muted" id="last-updated">Last updated: never</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Backend Health</h2>
+        <div id="health-status" class="pill down">Unknown</div>
+        <p class="muted" id="db-target">DB target: -</p>
+      </article>
+
+      <article class="card">
+        <h2>Machine Summary</h2>
+        <table>
+          <tbody id="machine-summary"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Service Status</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Status</th>
+            <th>Container Name</th>
+          </tr>
+        </thead>
+        <tbody id="service-rows">
+          <tr><td colspan="3" class="muted">No data yet.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Container Status</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Image</th>
+            <th>State</th>
+            <th>Container ID</th>
+          </tr>
+        </thead>
+        <tbody id="container-rows">
+          <tr><td colspan="4" class="muted">No data yet.</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" id="docker-note"></p>
+    </section>
+  </main>
 
   <script>
-    const output = document.getElementById('output');
-    const button = document.getElementById('check-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const healthStatus = document.getElementById('health-status');
+    const dbTarget = document.getElementById('db-target');
+    const machineSummary = document.getElementById('machine-summary');
+    const serviceRows = document.getElementById('service-rows');
+    const containerRows = document.getElementById('container-rows');
+    const dockerNote = document.getElementById('docker-note');
+    const lastUpdated = document.getElementById('last-updated');
 
-    button.addEventListener('click', async () => {
-      output.textContent = 'Loading...';
+    function row(label, value) {
+      return `<tr><th>${label}</th><td>${value ?? '-'}</td></tr>`;
+    }
+
+    function formatPercent(v) {
+      return typeof v === 'number' ? `${v.toFixed(1)}%` : '-';
+    }
+
+    function statusPill(status) {
+      const normalized = (status || 'unknown').toLowerCase();
+      const ok = normalized === 'running' || normalized === 'healthy';
+      const cls = ok ? 'ok' : 'down';
+      return `<span class="pill ${cls}">${status || 'unknown'}</span>`;
+    }
+
+    function findServiceContainer(containers, key) {
+      return containers.find((c) => (c.name || '').toLowerCase().includes(key));
+    }
+
+    async function loadDashboard() {
       try {
-        const response = await fetch('/api/health');
+        const response = await fetch('/api/dashboard');
         const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
+
+        const health = data.health || {};
+        const system = data.system || {};
+        const containers = data.containers || {};
+
+        const statusOk = health.status === 'ok';
+        healthStatus.textContent = statusOk ? 'Healthy' : 'Unhealthy';
+        healthStatus.className = `pill ${statusOk ? 'ok' : 'down'}`;
+
+        const db = health.database || {};
+        dbTarget.textContent = `DB target: ${db.host || '-'}:${db.port || '-'}`;
+
+        machineSummary.innerHTML = [
+          row('Hostname', system.hostname),
+          row('OS', `${system.platform?.system || '-'} ${system.platform?.release || ''}`),
+          row('CPU Usage', formatPercent(system.cpu?.usage_percent)),
+          row('CPU Cores', system.cpu?.logical_cores),
+          row('Memory Used', formatPercent(system.memory?.used_percent)),
+          row('Memory Total (MB)', system.memory?.total_mb),
+          row('Docker Host', system.docker_host?.name || 'unavailable'),
+          row('Docker Engine', system.docker_host?.server_version || 'unavailable')
+        ].join('');
+
+        const list = Array.isArray(containers.containers) ? containers.containers : [];
+
+        const frontendC = findServiceContainer(list, 'frontend');
+        const backendC = findServiceContainer(list, 'backend');
+        const databaseC = findServiceContainer(list, 'database');
+
+        serviceRows.innerHTML = [
+          `<tr><td>frontend</td><td>${statusPill(frontendC?.state)}</td><td><code>${frontendC?.name || 'not found'}</code></td></tr>`,
+          `<tr><td>backend</td><td>${statusPill(backendC?.state)}</td><td><code>${backendC?.name || 'not found'}</code></td></tr>`,
+          `<tr><td>database</td><td>${statusPill(databaseC?.state)}</td><td><code>${databaseC?.name || 'not found'}</code></td></tr>`
+        ].join('');
+
+        if (list.length === 0) {
+          containerRows.innerHTML = '<tr><td colspan="4" class="muted">No containers found or Docker access unavailable.</td></tr>';
+        } else {
+          containerRows.innerHTML = list.map((c) => `
+            <tr>
+              <td>${c.name}</td>
+              <td><code>${c.image}</code></td>
+              <td>${c.state}</td>
+              <td><code>${c.id}</code></td>
+            </tr>
+          `).join('');
+        }
+
+        dockerNote.textContent = containers.error
+          ? `Docker note: ${containers.error}`
+          : `Docker access: ${containers.docker_access || 'unknown'} | Containers found: ${containers.count ?? 0}`;
+
+        lastUpdated.textContent = `Last updated: ${new Date().toLocaleString()}`;
       } catch (error) {
-        output.textContent = `Request failed: ${error.message}`;
+        healthStatus.textContent = 'API Error';
+        healthStatus.className = 'pill down';
+        dockerNote.textContent = `Failed to load dashboard: ${error.message}`;
       }
-    });
+    }
+
+    refreshBtn.addEventListener('click', loadDashboard);
+    loadDashboard();
+    setInterval(loadDashboard, 10000);
   </script>
 </body>
 </html>
