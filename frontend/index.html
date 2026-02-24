@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Microservices Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .card {
+      max-width: 640px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+    button {
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Microservices Full Stack Demo</h1>
+    <p>This frontend calls the Flask backend health API through Nginx.</p>
+    <button id="check-btn">Check Backend Health</button>
+    <pre id="output">Click the button to call /api/health</pre>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const button = document.getElementById('check-btn');
+
+    button.addEventListener('click', async () => {
+      output.textContent = 'Loading...';
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        output.textContent = `Request failed: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>

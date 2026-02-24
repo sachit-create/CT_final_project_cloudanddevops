@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: demo-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+    container_name: demo-backend
+    ports:
+      - "5000:5000"
+    environment:
+      # Backend reads these vars to know how to reach the database.
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: appdb
+      DB_USER: appuser
+      DB_PASSWORD: apppassword
+    depends_on:
+      - database
+
+  database:
+    image: postgres:17-alpine
+    container_name: demo-database
+    environment:
+      # Initial Postgres setup values.
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # No ports section here, so database is not publicly exposed.
+
+volumes:
+  postgres_data:
