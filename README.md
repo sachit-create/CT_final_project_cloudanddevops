@@ -146,6 +146,7 @@ docker compose up -d --build
 6. Access app via:
 
 - `http://<EC2_PUBLIC_IP>:3000`
+- `http://<EC2_PUBLIC_IP>:5000/dashboard`
 
 ### Production notes (next step)
 
