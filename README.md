@@ -142,9 +142,7 @@ volumes:
 ```bash
 docker compose up -d --build
 ```
-
-### Production notes (next step)
-
+> No Productin Notes Required
 - Use real secrets management (not plain text in compose).
 - Put Nginx/ALB + HTTPS in front.
 - Restrict backend port exposure if not needed publicly.
